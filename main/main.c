@@ -28,27 +28,73 @@ void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
 {
     switch (event) {
         case ESP_AVRC_CT_CONNECTION_STATE_EVT:
-            ESP_LOGI(TAG, "AVRCP Controller connected");
+            ESP_LOGI(TAG, "📶 AVRCP connected");
+            if (param->conn_stat.connected) {
+                // Request metadata (title, artist, album)
+                esp_avrc_ct_send_metadata_cmd(0,
+                    ESP_AVRC_MD_ATTR_TITLE |
+                    ESP_AVRC_MD_ATTR_ARTIST |
+                    ESP_AVRC_MD_ATTR_ALBUM);
+
+                // Register for volume and playback status changes
+                esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
+                esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
+            }
             break;
 
         case ESP_AVRC_CT_METADATA_RSP_EVT:
-            ESP_LOGI(TAG, "Metadata Received: Attr %d, %.*s",
-                     param->meta_rsp.attr_id,
-                     param->meta_rsp.attr_length,
-                     param->meta_rsp.attr_text);
+            switch (param->meta_rsp.attr_id) {
+                case ESP_AVRC_MD_ATTR_TITLE:
+                    ESP_LOGI(TAG, "🎵 Title: %.*s", param->meta_rsp.attr_length, param->meta_rsp.attr_text);
+                    break;
+                case ESP_AVRC_MD_ATTR_ARTIST:
+                    ESP_LOGI(TAG, "🎤 Artist: %.*s", param->meta_rsp.attr_length, param->meta_rsp.attr_text);
+                    break;
+                case ESP_AVRC_MD_ATTR_ALBUM:
+                    ESP_LOGI(TAG, "💿 Album: %.*s", param->meta_rsp.attr_length, param->meta_rsp.attr_text);
+                    break;
+                case ESP_AVRC_RN_VOLUME_CHANGE:
+                    ESP_LOGI(TAG, "🔊 Volume changed: %d", param->change_ntf.event_parameter.volume);
+                    esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0); // re-register!
+                    break;
+                
+            }
             break;
 
         case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
-            if (param->change_ntf.event_id == ESP_AVRC_RN_VOLUME_CHANGE) {
-                ESP_LOGI(TAG, "Volume Changed: %d", param->change_ntf.event_parameter.volume);
+            switch (param->change_ntf.event_id) {
+                case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
+                    switch (param->change_ntf.event_parameter.playback) {
+                        case ESP_AVRC_PLAYBACK_PLAYING:
+                            ESP_LOGI(TAG, "▶️ Playback Status: Playing");
+                            break;
+                        case ESP_AVRC_PLAYBACK_PAUSED:
+                            ESP_LOGI(TAG, "⏸️ Playback Status: Paused");
+                            break;
+                        case ESP_AVRC_PLAYBACK_STOPPED:
+                            ESP_LOGI(TAG, "⏹️ Playback Status: Stopped");
+                            break;
+                        default:
+                            ESP_LOGI(TAG, "Playback Status Changed: %d", param->change_ntf.event_parameter.playback);
+                            break;
+                    }
+                    // re-register to keep getting updates
+                    esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
+                    break;
+
+                case ESP_AVRC_RN_VOLUME_CHANGE:
+                    ESP_LOGI(TAG, "🔊 Volume changed: %d", param->change_ntf.event_parameter.volume);
+                    esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
+                    break;
             }
             break;
 
         default:
-            ESP_LOGI(TAG, "Unhandled AVRCP event: %d", event);
             break;
     }
 }
+
+
 
 
 // I2S Initialization
@@ -114,23 +160,19 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_bluedroid_init());
     ESP_ERROR_CHECK(esp_bluedroid_enable());
 
-    // Set Bluetooth name
-    ESP_ERROR_CHECK(esp_bt_dev_set_device_name("ESP32-SPEAKER"));
+    ESP_ERROR_CHECK(esp_bt_gap_set_device_name("ESP32-SPEAKER"));
 
-    // Initialize I2S
+    // 💡 AVRCP must be initialized BEFORE A2DP
+    ESP_ERROR_CHECK(esp_avrc_ct_init());
+    ESP_ERROR_CHECK(esp_avrc_ct_register_callback(bt_avrc_ct_cb));
+
     i2s_init();
 
-    // Register A2DP Sink
     ESP_ERROR_CHECK(esp_a2d_register_callback(&bt_app_a2d_cb));
     ESP_ERROR_CHECK(esp_a2d_sink_register_data_callback(bt_app_a2d_data_cb));
     ESP_ERROR_CHECK(esp_a2d_sink_init());
 
-    // AVRCP Controller init
-    ESP_ERROR_CHECK(esp_avrc_ct_init());
-    ESP_ERROR_CHECK(esp_avrc_ct_register_callback(bt_avrc_ct_cb));
-
-    // Make discoverable & connectable
     ESP_ERROR_CHECK(esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE));
 
-    ESP_LOGI(TAG, "A2DP Sink initialized. Ready to pair and stream.");
+    ESP_LOGI(TAG, "✅ Ready to pair and stream.");
 }
