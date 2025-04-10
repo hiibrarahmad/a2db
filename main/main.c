@@ -27,23 +27,23 @@ static uint8_t last_volume = 0;
 
 void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
 {
+    ESP_LOGI(TAG, "AVRCP callback event: %d", event);
+    
+    // Log additional information for debugging purposes
     switch (event) {
         case ESP_AVRC_CT_CONNECTION_STATE_EVT:
             ESP_LOGI(TAG, "📶 AVRCP connected");
             if (param->conn_stat.connected) {
-                // Request metadata (title, artist, album)
+                // Request metadata and register notifications for playback status and volume change
                 esp_avrc_ct_send_metadata_cmd(0,
-                    ESP_AVRC_MD_ATTR_TITLE |
-                    ESP_AVRC_MD_ATTR_ARTIST |
-                    ESP_AVRC_MD_ATTR_ALBUM);
-
-                // Register for volume and playback status changes
+                    ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM);
                 esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
                 esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
             }
             break;
 
         case ESP_AVRC_CT_METADATA_RSP_EVT:
+            ESP_LOGI(TAG, "Metadata rsp (attr id: %d)", param->meta_rsp.attr_id);
             switch (param->meta_rsp.attr_id) {
                 case ESP_AVRC_MD_ATTR_TITLE:
                     ESP_LOGI(TAG, "🎵 Title: %.*s", param->meta_rsp.attr_length, param->meta_rsp.attr_text);
@@ -54,71 +54,57 @@ void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
                 case ESP_AVRC_MD_ATTR_ALBUM:
                     ESP_LOGI(TAG, "💿 Album: %.*s", param->meta_rsp.attr_length, param->meta_rsp.attr_text);
                     break;
-                /*  
-                // Optionally, you can handle volume change here as well, but to avoid duplicate processing
-                // it is recommended to use the CHANGE_NOTIFY event instead.
-                case ESP_AVRC_RN_VOLUME_CHANGE: {
-                    uint8_t new_volume = param->change_ntf.event_parameter.volume;
-                    int diff = (int)new_volume - (int)last_volume;
-                    if(diff > 0)
-                        ESP_LOGI(TAG, "🔊 Volume increased by %d (from %d to %d)", diff, last_volume, new_volume);
-                    else if(diff < 0)
-                        ESP_LOGI(TAG, "🔊 Volume decreased by %d (from %d to %d)", -diff, last_volume, new_volume);
-                    else
-                        ESP_LOGI(TAG, "🔊 Volume unchanged at %d", new_volume);
-                    last_volume = new_volume;
-                    // re-register to keep getting volume updates
-                    esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
+                default:
+                    ESP_LOGI(TAG, "Unknown metadata attribute: %d", param->meta_rsp.attr_id);
                     break;
-                }
-                */
             }
             break;
 
         case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
+            ESP_LOGI(TAG, "Notify event: %d", param->change_ntf.event_id);
             switch (param->change_ntf.event_id) {
-                case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
-                    switch (param->change_ntf.event_parameter.playback) {
-                        case ESP_AVRC_PLAYBACK_PLAYING:
-                            ESP_LOGI(TAG, "▶️ Playback Status: Playing");
-                            break;
-                        case ESP_AVRC_PLAYBACK_PAUSED:
-                            ESP_LOGI(TAG, "⏸️ Playback Status: Paused");
-                            break;
-                        case ESP_AVRC_PLAYBACK_STOPPED:
-                            ESP_LOGI(TAG, "⏹️ Playback Status: Stopped");
-                            break;
-                        default:
-                            ESP_LOGI(TAG, "Playback Status Changed: %d", param->change_ntf.event_parameter.playback);
-                            break;
-                    }
-                    // Re-register to keep getting status updates
+                case ESP_AVRC_RN_PLAY_STATUS_CHANGE: {
+                    uint8_t play_status = param->change_ntf.event_parameter.playback;
+                    if (play_status == ESP_AVRC_PLAYBACK_PLAYING)
+                        ESP_LOGI(TAG, "▶️ Playback Status: Playing");
+                    else if (play_status == ESP_AVRC_PLAYBACK_PAUSED)
+                        ESP_LOGI(TAG, "⏸️ Playback Status: Paused");
+                    else if (play_status == ESP_AVRC_PLAYBACK_STOPPED)
+                        ESP_LOGI(TAG, "⏹️ Playback Status: Stopped");
+                    else
+                        ESP_LOGI(TAG, "Playback status: %d", play_status);
                     esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
                     break;
+                }
 
                 case ESP_AVRC_RN_VOLUME_CHANGE: {
                     uint8_t new_volume = param->change_ntf.event_parameter.volume;
                     int diff = (int)new_volume - (int)last_volume;
-                    if(diff > 0)
+                    if (diff > 0)
                         ESP_LOGI(TAG, "🔊 Volume increased by %d (from %d to %d)", diff, last_volume, new_volume);
-                    else if(diff < 0)
+                    else if (diff < 0)
                         ESP_LOGI(TAG, "🔊 Volume decreased by %d (from %d to %d)", -diff, last_volume, new_volume);
                     else
-                        ESP_LOGI(TAG, "🔊 Volume unchanged at %d", new_volume);
+                        ESP_LOGI(TAG, "🔊 Volume unchanged: %d", new_volume);
                     last_volume = new_volume;
-                    // Re-register to continue receiving volume change notifications
                     esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
                     break;
                 }
+
+                default:
+                    ESP_LOGI(TAG, "Unhandled notify event: %d", param->change_ntf.event_id);
+                    break;
             }
             break;
 
         default:
+            ESP_LOGI(TAG, "Unhandled AVRCP callback event: %d", event);
             break;
     }
 }
 
-// I2S Initialization remains unchanged
+
+// I2S Initialization
 void i2s_init()
 {
     i2s_config_t i2s_config = {
@@ -147,14 +133,14 @@ void i2s_init()
     ESP_ERROR_CHECK(i2s_zero_dma_buffer(I2S_NUM_0));
 }
 
-// Audio data callback: Send data to I2S
+// Audio data callback: send audio data to I2S
 void bt_app_a2d_data_cb(const uint8_t *data, uint32_t len)
 {
     size_t bytes_written;
     i2s_write(I2S_NUM_0, data, len, &bytes_written, portMAX_DELAY);
 }
 
-// A2DP state callback remains unchanged
+// A2DP state callback
 void bt_app_a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 {
     switch (event) {
@@ -165,6 +151,7 @@ void bt_app_a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
             ESP_LOGI(TAG, "A2DP audio state: %d", param->audio_stat.state);
             break;
         default:
+            ESP_LOGI(TAG, "Unhandled A2DP callback event: %d", event);
             break;
     }
 }
@@ -183,7 +170,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_bt_gap_set_device_name("ESP32-SPEAKER"));
 
-    // 💡 Initialize AVRCP (must be done before A2DP)
+    // Initialize AVRCP (must be done before A2DP)
     ESP_ERROR_CHECK(esp_avrc_ct_init());
     ESP_ERROR_CHECK(esp_avrc_ct_register_callback(bt_avrc_ct_cb));
 
