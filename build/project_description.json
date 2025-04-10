@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "a2db",
-    "project_version":    "31a7746-dirty",
+    "project_version":    "c75e117-dirty",
     "project_path":       "D:/a2db",
     "idf_path":           "C:/Users/MASTER/esp/v5.4/esp-idf",
     "build_dir":          "D:/a2db/build",

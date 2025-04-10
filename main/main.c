@@ -17,12 +17,13 @@
 
 #include "esp_avrc_api.h"
 
-
 // I2S GPIO Configuration (Match your hardware)
 #define I2S_BCLK 27
 #define I2S_LRCK 26
 #define I2S_DOUT 25
 
+// Global variable to track the previous volume
+static uint8_t last_volume = 0;
 
 void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
 {
@@ -53,11 +54,24 @@ void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
                 case ESP_AVRC_MD_ATTR_ALBUM:
                     ESP_LOGI(TAG, "💿 Album: %.*s", param->meta_rsp.attr_length, param->meta_rsp.attr_text);
                     break;
-                case ESP_AVRC_RN_VOLUME_CHANGE:
-                    ESP_LOGI(TAG, "🔊 Volume changed: %d", param->change_ntf.event_parameter.volume);
-                    esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0); // re-register!
+                /*  
+                // Optionally, you can handle volume change here as well, but to avoid duplicate processing
+                // it is recommended to use the CHANGE_NOTIFY event instead.
+                case ESP_AVRC_RN_VOLUME_CHANGE: {
+                    uint8_t new_volume = param->change_ntf.event_parameter.volume;
+                    int diff = (int)new_volume - (int)last_volume;
+                    if(diff > 0)
+                        ESP_LOGI(TAG, "🔊 Volume increased by %d (from %d to %d)", diff, last_volume, new_volume);
+                    else if(diff < 0)
+                        ESP_LOGI(TAG, "🔊 Volume decreased by %d (from %d to %d)", -diff, last_volume, new_volume);
+                    else
+                        ESP_LOGI(TAG, "🔊 Volume unchanged at %d", new_volume);
+                    last_volume = new_volume;
+                    // re-register to keep getting volume updates
+                    esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
                     break;
-                
+                }
+                */
             }
             break;
 
@@ -78,14 +92,24 @@ void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
                             ESP_LOGI(TAG, "Playback Status Changed: %d", param->change_ntf.event_parameter.playback);
                             break;
                     }
-                    // re-register to keep getting updates
+                    // Re-register to keep getting status updates
                     esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
                     break;
 
-                case ESP_AVRC_RN_VOLUME_CHANGE:
-                    ESP_LOGI(TAG, "🔊 Volume changed: %d", param->change_ntf.event_parameter.volume);
+                case ESP_AVRC_RN_VOLUME_CHANGE: {
+                    uint8_t new_volume = param->change_ntf.event_parameter.volume;
+                    int diff = (int)new_volume - (int)last_volume;
+                    if(diff > 0)
+                        ESP_LOGI(TAG, "🔊 Volume increased by %d (from %d to %d)", diff, last_volume, new_volume);
+                    else if(diff < 0)
+                        ESP_LOGI(TAG, "🔊 Volume decreased by %d (from %d to %d)", -diff, last_volume, new_volume);
+                    else
+                        ESP_LOGI(TAG, "🔊 Volume unchanged at %d", new_volume);
+                    last_volume = new_volume;
+                    // Re-register to continue receiving volume change notifications
                     esp_avrc_ct_send_register_notification_cmd(0, ESP_AVRC_RN_VOLUME_CHANGE, 0);
                     break;
+                }
             }
             break;
 
@@ -94,10 +118,7 @@ void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
     }
 }
 
-
-
-
-// I2S Initialization
+// I2S Initialization remains unchanged
 void i2s_init()
 {
     i2s_config_t i2s_config = {
@@ -126,14 +147,14 @@ void i2s_init()
     ESP_ERROR_CHECK(i2s_zero_dma_buffer(I2S_NUM_0));
 }
 
-// Audio data callback: Send to I2S
+// Audio data callback: Send data to I2S
 void bt_app_a2d_data_cb(const uint8_t *data, uint32_t len)
 {
     size_t bytes_written;
     i2s_write(I2S_NUM_0, data, len, &bytes_written, portMAX_DELAY);
 }
 
-// A2DP state callback
+// A2DP state callback remains unchanged
 void bt_app_a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 {
     switch (event) {
@@ -162,7 +183,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_bt_gap_set_device_name("ESP32-SPEAKER"));
 
-    // 💡 AVRCP must be initialized BEFORE A2DP
+    // 💡 Initialize AVRCP (must be done before A2DP)
     ESP_ERROR_CHECK(esp_avrc_ct_init());
     ESP_ERROR_CHECK(esp_avrc_ct_register_callback(bt_avrc_ct_cb));
 
