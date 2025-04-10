@@ -19,9 +19,9 @@
 
 
 // I2S GPIO Configuration (Match your hardware)
-#define I2S_BCLK 27
-#define I2S_LRCK 26
-#define I2S_DOUT 25
+#define I2S_BCLK 35
+#define I2S_LRCK 32
+#define I2S_DOUT 33
 
 
 void bt_avrc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
