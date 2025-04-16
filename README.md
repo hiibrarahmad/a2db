@@ -1,164 +1,242 @@
+Below is an enhanced, fancy, and highly detailed version of the complete content. This version includes additional context, clarifications, and elaborated sections to create a richer documentation experience. You can copy and paste this text directly.
+
+---
+
 # ESP32 Bluetooth Speaker 🔊
 
 ## 📖 Overview
-This project turns an **ESP32** into a Bluetooth speaker that can stream high-quality audio from any Bluetooth-capable device. It implements the **A2DP** (Advanced Audio Distribution Profile) for stereo audio streaming and **AVRCP** (Audio/Video Remote Control Profile) for media control and metadata. Audio is output through the ESP32's **I2S** interface to a digital-to-analog converter or digital amplifier, providing a true digital audio path for low-noise, high-quality sound.
 
-In essence, the ESP32 acts as a wireless audio receiver: once the firmware is flashed, the device becomes discoverable as **"ESP32-SPEAKER"**. Pair your phone or PC to the ESP32-SPEAKER, and any music or audio played will be heard through the connected speakers. The project is built with the Espressif **ESP-IDF** framework in C, making it highly customizable and updatable.
+The **ESP32 Bluetooth Speaker** project transforms an ESP32 development board into a high-fidelity wireless audio receiver. By leveraging classic Bluetooth profiles alongside advanced digital audio interfaces, this project streams audio seamlessly from any Bluetooth-enabled device—be it your smartphone, tablet, or PC.
+
+### Key Concepts
+- **A2DP (Advanced Audio Distribution Profile):** Facilitates high-quality stereo audio streaming.
+- **AVRCP (Audio/Video Remote Control Profile):** Enables remote control functions such as play, pause, and skip, while also providing metadata like track titles and artist information.
+- **I2S (Inter-IC Sound):** A digital audio interface that ensures the audio signal remains purely digital until it reaches an external digital-to-analog converter (DAC) or amplifier, keeping noise levels minimal.
+
+Once the firmware is flashed onto the ESP32, the device advertises itself as **"ESP32-SPEAKER"** and becomes discoverable. Pair your device effortlessly, and enjoy your favorite music with exceptional audio quality. Built using Espressif’s **ESP-IDF** framework in C, the project is not only robust but also easily extendable and customizable.
 
 ## ✨ Features
-- **🎵 Bluetooth A2DP Audio Streaming:** Receives stereo audio over Classic Bluetooth with high fidelity, suitable for music playback.
-- **🎮 AVRCP Control & Metadata:** Supports AVRCP for remote control commands (play, pause, skip) and media information. The ESP32 can handle play/pause from your phone and retrieve track info (title, artist, etc.) if the source provides it.
-- **🔊 I2S Digital Audio Output:** Uses the ESP32’s I2S interface to send audio data to an external DAC or I2S amplifier. This ensures a pure digital audio path for better sound quality. (Optionally, the ESP32’s internal DACs on GPIO25/GPIO26 can be used for basic analog output.)
-- **📲 Easy Bluetooth Pairing:** Appears as **"ESP32-SPEAKER"** when in pairing mode. No PIN by default (Just Works pairing), making connection simple and quick.
-- **⚙️ Configurable I2S Pins & Settings:** Default I2S pins are **GPIO27 (BCLK)**, **GPIO26 (LRCLK)**, and **GPIO25 (DOUT)**, but you can change them in the code or via menuconfig.
-- **📝 Logging & Debug Info:** Comprehensive log output over serial (at 115200 baud) for debugging and monitoring. See connection status, AVRCP events, audio packet counts, and more in real-time.
-- **📡 Extensible:** Built using ESP-IDF’s official Bluetooth stack, so it’s easy to extend with new features (e.g., adding Wi-Fi, voice assistant integration, or physical controls for volume and playback).
+
+- **🎵 Bluetooth A2DP Audio Streaming:**  
+  Stream high-quality stereo audio from any Bluetooth source. Perfect for delivering music with excellent fidelity.
+
+- **🎮 AVRCP Control & Metadata:**  
+  Manage playback (play/pause, skip) and view media information such as track title and artist. The ESP32 reacts to commands from your Bluetooth device in real time.
+
+- **🔊 I2S Digital Audio Output:**  
+  Utilize the ESP32’s I2S peripheral to send a digital audio stream to an external DAC or I2S amplifier. Optionally, internal DACs on GPIO25/GPIO26 can be used, though external solutions offer superior audio quality.
+
+- **📲 Easy Bluetooth Pairing:**  
+  Automatically appear in Bluetooth settings as **"ESP32-SPEAKER"**, using a simple no-PIN Just Works pairing method for ease of connection.
+
+- **⚙️ Configurable I2S Pins & Settings:**  
+  Default mapping uses **GPIO27** for BCLK, **GPIO26** for LRCLK, and **GPIO25** for DOUT. These settings can be modified in the source code or through the ESP-IDF menuconfig tool.
+
+- **📝 Detailed Logging & Debugging:**  
+  Extensive log output is provided over serial (at a baud rate of 115200) to facilitate debugging and monitoring. View connection statuses, AVRCP events, and audio packet counts in real time.
+
+- **📡 Extensible Architecture:**  
+  Constructed using ESP-IDF’s official Bluetooth stack, you can seamlessly integrate additional features such as Wi-Fi connectivity, voice assistants, physical volume controls, or even a custom user interface.
 
 ## 🛠️ Hardware Requirements
-To build this project, you will need the following hardware:
-- **ESP32 Dev Board:** Any ESP32 development board with Bluetooth Classic support (e.g., ESP32-WROOM-32 based boards). Ensure it has the standard dual-mode Bluetooth (most ESP32 except ESP32-S2/C3 will work).
-- **I2S DAC or I2S Amplifier:** A module or chip that converts I2S audio to analog or directly drives a speaker. For example:
-  - *DAC + Amp:* **MAX98357A** I2S Class-D amplifier breakout (outputs directly to a speaker, simple and fully digital).
-  - *DAC only:* **PCM5102A** DAC module (outputs line-level analog audio, use with an external amplifier or powered speakers).
-  - (Alternatively, you can use the ESP32’s **internal DACs** on GPIO25/GPIO26 with an analog amplifier, though with lower audio quality.)
-- **Speaker:** A speaker or pair of speakers to output the sound. For MAX98357A or similar, a single 4Ω or 8Ω speaker can be directly driven. For a DAC like PCM5102, use powered speakers or an audio amplifier module connected to the DAC’s output.
-- **Power Supply:** A 5V Micro-USB cable (to power the ESP32 dev board) or a suitable battery if making it portable. Ensure the I2S module is powered appropriately (3.3V or 5V as required by the module).
-- **Connecting Wires:** Jumper wires to connect the ESP32 to the DAC/amp module (for I2S lines, power, and ground). A breadboard can help for prototyping.
-- *(Optional)* **LEDs or Buttons:** Not required for core functionality, but you can add an LED for status indication (e.g., blinking when waiting for connection, solid when connected) or buttons to send AVRCP commands (like play/pause, volume) if you want to extend the project.
+
+To build and deploy this project, ensure you have the following components:
+
+- **ESP32 Development Board:**  
+  Choose an ESP32 board with Classic Bluetooth support (e.g., ESP32-WROOM-32). Most models work, except for certain ones like the ESP32-S2/C3 which lack dual-mode Bluetooth.
+
+- **I2S DAC or I2S Amplifier:**  
+  This module converts the digital I2S signal to an analog output. Options include:
+  - *DAC + Amplifier Combination:*  
+    **MAX98357A** I2S Class-D amplifier breakout, which is a compact and fully digital solution that directly drives a speaker.
+  - *Standalone DAC:*  
+    **PCM5102A** DAC module, which outputs a line-level analog signal to be used with an external amplifier.
+  - *(Alternate)* Use the ESP32’s built-in DACs on GPIO25/GPIO26 with an analog amplifier for a simpler, albeit lower-quality, audio solution.
+
+- **Speakers:**  
+  Depending on your DAC/amplifier module:
+  - With the MAX98357A, a single 4Ω or 8Ω speaker can be driven directly.
+  - For a DAC like the PCM5102, use powered speakers or an amplifier circuit.
+
+- **Power Supply:**  
+  A reliable 5V Micro-USB cable for powering the ESP32 board. For portable operation, consider using an appropriate battery that meets voltage requirements.
+
+- **Connecting Wires & Breadboard:**  
+  Jumper wires for connecting the ESP32 to your DAC or amplifier, and a breadboard to facilitate testing and prototyping.
+
+- *(Optional)* **LEDs or Buttons:**  
+  Add visual indicators (like status LEDs) or control buttons to extend functionality (for instance, for manual play/pause or volume control).
 
 ## 🔌 Wiring Guide
-Connect the ESP32 to the I2S DAC or amplifier as shown below. The default GPIO pins used for I2S can be changed in software, but by default make sure to wire as follows:
 
-| ESP32 GPIO      | I2S Signal        | DAC/Amplifier Pin      |
-| --------------- | ----------------- | ---------------------- |
-| **GPIO27**      | BCLK (Bit Clock)  | **BCK** or **SCK**     |
-| **GPIO26**      | LRCK (Word Select)| **LRCK** or **WS**     |
-| **GPIO25**      | DOUT (Data Out)   | **DIN** or **SD**      |
-| **3.3V** (or 5V)| Power Supply      | **VCC** (module power) |
-| **GND**         | Ground            | **GND**                |
-| *(If using internal DAC)* | Left Audio Out | GPIO25 (DAC Out) to amplifier input |
-| *(If using internal DAC)* | Right Audio Out| GPIO26 (DAC Out) to amplifier input |
+Below is a recommended wiring diagram outlining the connection between the ESP32 and your DAC/amplifier module:
 
-**Notes:**
-- Double-check the power requirements of your DAC/amp module. Many I2S DACs (like PCM5102) can be powered at 3.3V, while some breakouts have regulators to allow 5V. The MAX98357A amp can be powered with 3.3V or 5V (3.3V logic level compatible).
-- Common I2S module pin labels: *BCK* (bit clock), *LRCK* or *WS* (word select or left-right clock), *DIN* or *SD* (data in). Connect these to the corresponding ESP32 GPIOs as above.
-- Connect the speaker to the output of your amplifier or DAC module (e.g., the +/- speaker output of MAX98357A, or the L/R audio out pins of a DAC into an amplifier).
-- If you choose to use the ESP32’s internal DAC output: you don’t need an external I2S DAC, but you **do** need an external analog amplifier. Connect GPIO25 and GPIO26 from the ESP32 to the left and right audio inputs of an analog amplifier. Keep in mind the internal DAC is 8-bit and will not sound as good as an external DAC solution.
+| **ESP32 GPIO**           | **I2S Signal**           | **DAC/Amplifier Pin**       |
+| ------------------------ | ------------------------ | --------------------------- |
+| **GPIO27**               | BCLK (Bit Clock)         | **BCK** or **SCK**          |
+| **GPIO26**               | LRCK (Word Select)       | **LRCK** or **WS**          |
+| **GPIO25**               | DOUT (Data Out)          | **DIN** or **SD**           |
+| **3.3V** (or 5V)         | Power Supply             | **VCC** (module power)      |
+| **GND**                  | Ground                   | **GND**                     |
+| *(If using internal DAC)*| Left Audio Out           | GPIO25 (DAC Out) to amplifier input |
+| *(If using internal DAC)*| Right Audio Out          | GPIO26 (DAC Out) to amplifier input |
+
+**Additional Considerations:**
+- **Power Compatibility:**  
+  Check the voltage requirements for your chosen DAC/amplifier. Some modules, like the PCM5102, can operate at 3.3V, while others may require 5V.
+- **I2S Signal Clarity:**  
+  Ensure secure, clean connections for the I2S signals to maintain a pure digital audio path.
+- **Speaker Integration:**  
+  For direct drive amplifiers (like MAX98357A), simply connect your speaker to the designated output. With line-level DACs, an additional amplifier circuit is necessary.
 
 ## 💻 Software & Libraries
-This project is implemented using the **Espressif IoT Development Framework (ESP-IDF)** in C. It leverages Espressif’s built-in Bluetooth stack and drivers:
-- **ESP-IDF Bluetooth Stack (Bluedroid):** Provides the Classic Bluetooth A2DP and AVRCP profiles. We use the A2DP **Sink** role to receive audio, and AVRCP **Controller** role to receive notifications and potentially send control commands.
-- **ESP-IDF I2S Driver:** Handles the I2S peripheral to output the audio stream to the DAC/amp. The I2S is configured for stereo 16-bit audio at the sampling rate provided by the source (e.g., typically 44.1 kHz for music).
-- **FreeRTOS** (built into ESP-IDF): Used for creating tasks to handle Bluetooth events and I2S audio stream concurrently.
-- **No additional external libraries** are required beyond the ESP-IDF. All functionality (Bluetooth, I2S, etc.) uses the native IDF APIs. Just make sure you have ESP-IDF properly installed and set up.
+
+The software is implemented in **C** using the Espressif IoT Development Framework (ESP-IDF). The following key components are involved:
+
+- **Bluetooth Stack (Bluedroid):**  
+  Utilizes the built-in ESP-IDF Bluetooth stack to support the A2DP Sink and AVRCP Controller roles. This allows seamless audio reception and control commands between devices.
+
+- **I2S Driver:**  
+  Manages the digital audio stream using the ESP32’s I2S peripheral. The I2S driver is set up for stereo 16-bit audio at common sampling rates such as 44.1 kHz.
+
+- **FreeRTOS:**  
+  The real-time operating system underlying ESP-IDF that handles task scheduling, allowing concurrent management of Bluetooth events and I2S audio processing.
+
+- **Native IDF APIs:**  
+  No additional external libraries are necessary. All functionality is provided by the ESP-IDF, ensuring a streamlined development process.
 
 **Development Environment:**
-- Developed and tested on **ESP-IDF (v4.x and v5.x)**.
-- The project is configured for the **ESP32** target. (If using ESP-IDF 4+, you may need to run `idf.py set-target esp32` initially.)
-- Project settings can be adjusted via `menuconfig` (for example, change the Bluetooth device name or I2S pins).
+- Developed with **ESP-IDF v4.x and v5.x**.
+- The project is configured for the **ESP32** target. (For ESP-IDF 4+, running `idf.py set-target esp32` initially is required.)
+- Customize project settings using the `menuconfig` tool to modify device names, I2S pin assignments, and other parameters.
 
 ## 📂 Project Structure
+
+A recommended folder structure for the project is as follows:
+
+```
 ESP32-Bluetooth-Speaker/
 ├── main/
-│   ├── main.c            # Main application: initializes BT, sets up I2S, event handlers
-│   ├── bt_app_core.c     # Bluetooth core functions (BT stack initialization, task handling)
-│   ├── bt_app_core.h
-│   ├── bt_app_av.c       # Bluetooth A2DP/AVRCP event handling (audio data and media control)
-│   ├── bt_app_av.h
-│   └── (other source files if any, e.g., for util or configuration)
-├── CMakeLists.txt        # Project build configuration for ESP-IDF
-├── sdkconfig             # Configuration file (generated after running menuconfig)
-└── README.md             # Project documentation (this file)
+│   ├── main.c            # Main application: initializes BT, sets up I2S, and handles events.
+│   ├── bt_app_core.c     # Bluetooth core: initializes the BT stack and manages tasks.
+│   ├── bt_app_core.h     # Header file for Bluetooth core functions.
+│   ├── bt_app_av.c       # Handles Bluetooth A2DP/AVRCP events (audio data reception and media control).
+│   ├── bt_app_av.h       # Header file for A2DP/AVRCP functionality.
+│   └── (additional source files for utilities or configuration as required)
+├── CMakeLists.txt        # Build configuration for ESP-IDF.
+├── sdkconfig             # Auto-generated configuration file post-menuconfig.
+└── README.md             # Comprehensive project documentation (this file).
+```
 
+### Main Components Detailed:
+- **`main.c`:**  
+  Serves as the entry point. Here, NVS (Non-Volatile Storage) is initialized, the Bluetooth controller is configured, and the Bluedroid stack is started. This file also sets the device name to **"ESP32-SPEAKER"**, instantiates the A2DP sink and AVRCP controller, and initializes the I2S driver.
 
-**Main components:**
-- **`main.c`:** Entrypoint of the application. Initializes NVS, the Bluetooth controller, and the bluedroid stack. Configures the device name (`"ESP32-SPEAKER"`) and starts the A2DP sink and AVRCP controller. Sets up the I2S driver for audio data.
-- **`bt_app_core.c` / `bt_app_core.h`:** Contains tasks and helper functions to initialize the Bluetooth stack and handle events.
-- **`bt_app_av.c` / `bt_app_av.h`:** Implements audio data reception via A2DP and media control via AVRCP. Logs media information and handles AVRCP commands.
-- *(Additional files)* may include utilities or configuration helpers.
+- **`bt_app_core.c / bt_app_core.h`:**  
+  Contains the core Bluetooth functions including the initialization of the Bluetooth stack and event-handling loops using FreeRTOS.
+
+- **`bt_app_av.c / bt_app_av.h`:**  
+  Implements audio data reception over A2DP and processes AVRCP commands. This module logs metadata (e.g., track information) and handles user control commands.
 
 ## 🚀 Installation & Build Instructions
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/<your-username>/ESP32-Bluetooth-Speaker.git
-   cd ESP32-Bluetooth-Speaker
-🚀 Installation & Build Instructions
-------------------------------------
 
-### Set up ESP-IDF environment:
+Follow these step-by-step instructions to build and deploy your firmware:
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   . ~/esp/esp-idf/export.sh   `
+### 1. Clone the Repository:
+Clone the project from GitHub and navigate into the directory:
+```sh
+git clone https://github.com/<your-username>/ESP32-Bluetooth-Speaker.git
+cd ESP32-Bluetooth-Speaker
+```
 
-_(Refer to the_ [_ESP-IDF Getting Started Guide_](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/) _for detailed setup instructions.)_
+### 2. Set Up the ESP-IDF Environment:
+Run the following command to source the ESP-IDF environment variables:
+```sh
+. ~/esp/esp-idf/export.sh
+```
+For detailed installation instructions, refer to the [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/).
 
-### Configure the project (optional):
+### 3. Configure the Project (Optional):
+Customize project settings such as the device name, I2S DAC configuration, or pin numbers via:
+```sh
+idf.py menuconfig
+```
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   idf.py menuconfig   `
+### 4. Build the Firmware:
+Compile the project by setting the target (if required) and building:
+```sh
+idf.py set-target esp32    # (Run only once)
+idf.py build
+```
 
-Modify settings such as the Bluetooth device name, internal DAC vs external I2S DAC, and I2S pin numbers if needed.
+### 5. Flash the Firmware to the ESP32:
+Upload the firmware to your ESP32 board using the appropriate serial port:
+```sh
+idf.py -p /dev/ttyUSB0 flash   # Replace '/dev/ttyUSB0' with your serial port identifier
+```
 
-### Build the firmware:
+### 6. Monitor the Serial Output:
+(Optional but recommended) View log messages and debugging output:
+```sh
+idf.py -p /dev/ttyUSB0 monitor
+```
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   idf.py set-target esp32    # (Only needed once)  idf.py build   `
+*Tip:* You can combine flashing and monitoring in one command:
+```sh
+idf.py -p /dev/ttyUSB0 flash monitor
+```
 
-### Flash to the ESP32:
+Upon flashing, the ESP32 will automatically reboot and run the Bluetooth speaker application.
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   idf.py -p /dev/ttyUSB0 flash   # Replace with your serial port   `
+## ▶️ Usage (Step-by-Step)
 
-### Monitor the serial output (optional but recommended):
+1. **Power On the ESP32 + Speaker:**  
+   Connect your ESP32 to a power source. Ensure the I2S DAC/amplifier and speakers are correctly wired.
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   idf.py -p /dev/ttyUSB0 monitor   `
+2. **Pair with Your Bluetooth Device:**  
+   Open the Bluetooth settings on your smartphone, tablet, or computer. Select **"ESP32-SPEAKER"** from the available devices. The pairing process requires no PIN.
 
-_Tip: You can combine flash & monitor:_
+3. **Connect and Play Audio:**  
+   Once connected, any audio played on your Bluetooth device will stream directly to the ESP32, routed through the I2S interface.
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   idf.py -p /dev/ttyUSB0 flash monitor   `
+4. **Adjust Volume and Playback:**  
+   Control playback via the connected Bluetooth device. The AVRCP feature ensures that commands such as play, pause, and skip are executed on the ESP32.
 
-After flashing, the ESP32 will reboot and start the Bluetooth speaker application automatically.
+5. **Monitor Operation:**  
+   Use the serial monitor to track debug messages indicating connection status, audio packet counts, and playback information. This helps ensure the system operates as expected.
 
-▶️ Usage (Step-by-Step)
------------------------
+## 📝 Logging & Notifications
 
-*   **Power on the ESP32 + Speaker:** Connect the ESP32 to a power source. Ensure the I2S DAC/amplifier and speaker are properly connected.
-    
-*   **Pair with your Bluetooth device:** Open Bluetooth settings on your phone or computer, and select **ESP32-SPEAKER** from the list. No PIN is required by default.
-    
-*   **Connect and play audio:** Once connected, any audio played on your device will stream to the ESP32 and output via the I2S interface.
-    
-*   **Adjust volume / playback:** Use your device’s controls to change volume or playback state. AVRCP commands will be handled by the ESP32.
-    
-*   **Test and verify:** Monitor the serial output for log messages indicating connection status, audio packets, and AVRCP events.
-    
+Here is an example of what you might see on the serial monitor:
+```sh
+I (3010) BT_INIT: Bluetooth initialized, device name set to "ESP32-SPEAKER"
+I (5020) BT_AV: A2DP connection state: Connected, [24:6F:28:3A:BC:5E]
+I (6050) BT_AV: Audio packet count 100
+I (7000) BT_AV: Now playing: "Song Title" by Artist Name
+I (8000) BT_AV: Volume set to 80%
+```
+These logs are invaluable for troubleshooting and ensuring that every component—from Bluetooth connectivity to audio streaming—is functioning properly.
 
-📝 Logging & Notifications
---------------------------
+## 🤝 Contributing
 
-**Serial monitor output example:**
+We welcome contributions! To get involved:
+- **Fork the Repository:** Create your own branch to introduce new features or fixes.
+- **Submit a Pull Request:** Detail your changes and ensure thorough testing.
+- **Report Issues:** Open issues on GitHub with clear reproduction steps and logs to help us improve the project.
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   I (3010) BT_INIT: Bluetooth initialized, device name set to "ESP32-SPEAKER"  I (5020) BT_AV: A2DP connection state: Connected, [24:6F:28:3A:BC:5E]  I (6050) BT_AV: Audio packet count 100  I (7000) BT_AV: Now playing: "Song Title" by Artist Name  I (8000) BT_AV: Volume set to 80%   `
+## 📜 License
 
-Logs display connection status, audio packet counts, track info, and volume changes. Useful for debugging and ensuring the system is working as expected.
+This project is distributed under the **MIT License**. For full details, please see the [LICENSE](https://chatgpt.com/c/LICENSE) file included in the repository.
 
-🤝 Contributing
----------------
+## ✉️ Contact
 
-*   Fork the repository and create a pull request with your changes.
-    
-*   Document any new features and test thoroughly.
-    
-*   Open issues for bugs or suggestions with detailed reproduction steps and logs.
-    
+For questions or further discussion:
+- **Maintainer:** Ibrar Ahmad  
+  **Email:** [hiibrarahmad@gmail.com](mailto:hiibrarahmad@gmail.com)
+- Alternatively, connect on GitHub, or reach out via [LinkedIn](https://www.linkedin.com/hiibrarahmad).
 
-📜 License
-----------
+---
 
-This project is licensed under the **MIT License**.See the [LICENSE](https://chatgpt.com/c/LICENSE) file for the full license text.
+Enjoy building and using the ESP32 Bluetooth Speaker! Embrace the journey of hacking and innovation—**Happy Hacking!** 🔊🎶
 
-✉️ Contact
-----------
-
-*   **Maintainer:** \[Your Name\]**Email:** [youremail@example.com](mailto:youremail@example.com)
-    
-*   Alternatively, open an issue on GitHub or connect via [LinkedIn](https://www.linkedin.com/) or [Twitter](https://www.twitter.com/)
-    
-
-Enjoy building and using the ESP32 Bluetooth Speaker!**Happy hacking!** 🔊🎶
+--- 
